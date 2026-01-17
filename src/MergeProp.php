@@ -2,7 +2,7 @@
 
 namespace DesertDionysus\Inertia;
 
-class LazyProp
+class MergeProp
 {
     /** @var callable */
     protected $callback;

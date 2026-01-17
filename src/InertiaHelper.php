@@ -1,6 +1,6 @@
 <?php
 
-namespace BoxyBird\Inertia;
+namespace DesertDionysus\Inertia;
 
 class InertiaHelper
 {
@@ -16,6 +16,18 @@ class InertiaHelper
     public static function arrayOnly($array, $keys)
     {
         return array_intersect_key($array, array_flip((array) $keys));
+    }
+
+    /**
+     * Get all of the given array except for a specified array of keys.
+     *
+     * @param  array  $array
+     * @param  array|string  $keys
+     * @return array
+     */
+    public static function arrayExcept($array, $keys)
+    {
+        return array_diff_key($array, array_flip((array) $keys));
     }
 
     /**
@@ -58,5 +70,17 @@ class InertiaHelper
         $array[array_shift($keys)] = $value;
 
         return $array;
+    }
+
+    /**
+     * Determine if a value is "callable" but not a string.
+     * This helps distinguish between function names as strings and actual closures/callables.
+     *
+     * @param  mixed  $value
+     * @return bool
+     */
+    public static function isCallable($value)
+    {
+        return !is_string($value) && is_callable($value);
     }
 }

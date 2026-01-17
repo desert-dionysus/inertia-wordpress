@@ -1,24 +1,26 @@
 {
-  "name": "boxybird/inertia-wordpress",
-  "description": "The WordPress adapter for Inertia.js",
-  "type": "wordpress-plugin",
+  "name": "desert-dionysus/inertia-wordpress",
+  "description": "The modernized WordPress adapter for Inertia.js v2.0",
   "license": "MIT",
   "keywords": [
     "wordpress",
     "inertia.js",
-    "plugin"
+    "plugin",
+    "vue",
+    "react"
   ],
   "authors": [
     {
-      "name": "Andrew Rhyand",
-      "email": "hello@andrewrhyand.com"
+      "name": "David Claiborne",
+      "email": "mail@davidclaiborne.com"
     }
   ],
   "require": {
+    "php": ">=8.2"
   },
   "autoload": {
     "psr-4": {
-      "BoxyBird\\Inertia\\": "src/"
+      "DesertDionysus\\Inertia\\": "src/"
     },
     "files": [
       "src/functions.php"

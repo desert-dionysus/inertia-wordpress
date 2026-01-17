@@ -1,36 +1,26 @@
-# Inertia.js WordPress Adapter
+# Inertia.js WordPress Adapter (Modernized Fork)
 
-The unofficial [Inertia.js](https://inertiajs.com) server-side adapter for WordPress.
+A modernized [Inertia.js](https://inertiajs.com) server-side adapter for WordPress, aligned with Inertia.js v2.0+ protocol.
+
+> **Note**: This is a fork of the excellent work by [Andrew Rhyand (BoxyBird)](https://github.com/boxybird/inertia-wordpress). While the core philosophy remains the same, this version has been modernized for PHP 8.2+ and adds support for the latest Inertia.js features like Deferred Props, Merge Props, and more.
 
 ## Installation
 
-Option 1: Install the package via composer. (**Recommended**)
+Install the package via composer:
 
+```bash
+composer require desert-dionysus/inertia-wordpress
 ```
-composer require boxybird/inertia-wordpress
-```
 
-Option 2: Clone or download as a plugin and run `composer install` before activating in WordPress Admin.
+## Acknowledgements & Resources
 
-## Bare-bones Example Theme
-- https://github.com/boxybird/wordpress-inertia-starter-theme
-
-## Example Movie CPT WordPress Project
-- Demo: https://wp-inertia.andrewrhyand.com
-- Theme: https://github.com/boxybird/wordpress-inertia-demo-theme
-
-## Inertia Docs
-
-- Links: https://inertiajs.com/links
-- Pages: https://inertiajs.com/pages
-- Requests: https://inertiajs.com/requests
-- Shared Data: https://inertiajs.com/shared-data
-- Asset Versioning: https://inertiajs.com/asset-versioning
-- Partial Reloads: https://inertiajs.com/partial-reloads
+This project is a fork of `boxybird/inertia-wordpress`. We highly recommend checking out Andrew's original work and examples:
+- **Original Repository**: [boxybird/inertia-wordpress](https://github.com/boxybird/inertia-wordpress)
+- **Example Movie CPT Project**: [Theme Repository](https://github.com/boxybird/wordpress-inertia-demo-theme) | [Demo Site](https://wp-inertia.andrewrhyand.com)
 
 ## Root Template Example
 
-> Location: /wp-content/themes/your-theme/app.php
+> Location: `/wp-content/themes/your-theme/app.php` (or `layout.php`)
 
 ```php
 <!DOCTYPE html>
@@ -41,184 +31,148 @@ Option 2: Clone or download as a plugin and run `composer install` before activa
         <?php wp_head(); ?>
     </head>
     <body>
-
-        <?php bb_inject_inertia(); ?> // Adds Inertia to the page
-
+        <?php bb_inject_inertia(); ?>
         <?php wp_footer(); ?>
     </body>
 </html>
 ```
 
-### Root Template File Override
+## The `inertia()` Helper
 
-> Location: /wp-content/themes/your-theme/functions.php
-
-By default the WordPress adapter will use the `app.php` from `.../your-theme/app.php`. If you would like to use a different file name, you can change it. E.g. `.../your-theme/layout.php`.
+This fork introduces a global `inertia()` helper function that provides a fluent API similar to Laravel's adapter.
 
 ```php
-<?php
+// Render a component
+return inertia('Index', ['posts' => $posts]);
 
+// Chainable methods
+return inertia()
+    ->version('1.0.0')
+    ->share('key', 'value')
+    ->render('Index', $props);
+```
+
+## Core Features
+
+### Inertia Responses
+
+```php
+use DesertDionysus\Inertia\Inertia;
+
+// Using the Class
+return Inertia::render('Posts/Index', [
+    'posts' => $posts,
+]);
+
+// Or using the helper
+return inertia('Posts/Index', [
+    'posts' => $posts,
+]);
+```
+
+### Shared Data
+
+Shared data is automatically included in every Inertia response.
+
+```php
+inertia()->share('site_name', get_bloginfo('name'));
+
+// Shared Closures are only executed if they are included in the response
+inertia()->share('auth', function () {
+    return is_user_logged_in() ? wp_get_current_user() : null;
+});
+```
+
+### Always Props (v2.0)
+
+Props wrapped in `always()` will be included in every response, even during partial reloads where they weren't specifically requested.
+
+```php
+return inertia('Profile', [
+    'user' => $user,
+    'social_links' => Inertia::always($links),
+]);
+```
+
+### Deferred Props (v2.0)
+
+Deferred props allow you to load heavy data asynchronously after the initial page load.
+
+```php
+return inertia('Dashboard', [
+    'stats' => Inertia::defer(fn() => get_heavy_stats()),
+    'logs'  => Inertia::defer(fn() => get_logs(), 'activity-group'),
+]);
+```
+
+### Merge Props (v2.0)
+
+Useful for infinite scrolling or pagination.
+
+```php
+return inertia('Blog', [
+    'posts' => Inertia::merge(fn() => get_next_page_posts()),
+]);
+```
+
+### External Redirects
+
+Handles full-page redirects, even during Inertia AJAX requests.
+
+```php
+return Inertia::location('https://external-site.com');
+```
+
+## WordPress Integration
+
+### Automatic Nonce Injection
+
+This adapter automatically includes a `wp_rest` nonce in every response under the `nonce` prop, simplifying CSRF protection for your API calls.
+
+### Flash Messages & Validation Errors
+
+Easily pass flash messages or validation errors that will be automatically shared via the `flash` and `errors` props.
+
+```php
+// In your "Controller"
+inertia()->flash('success', 'Post updated!');
+inertia()->withErrors(['title' => 'Title is required']);
+
+return Inertia::location(get_permalink($post_id));
+```
+
+### Asset Versioning
+
+```php
+// Automatically version from Vite manifest
+Inertia::versionFromVite(get_stylesheet_directory() . '/dist/manifest.json');
+
+// Or from any specific file
+Inertia::versionFromFile(get_stylesheet_directory() . '/style.css');
+
+// Or manually
+Inertia::version('v1.2.3');
+```
+
+## Configuration
+
+### Root Template File Override
+
+```php
 add_action('init', function () {
     Inertia::setRootView('layout.php');
 });
 ```
 
-### Inertia Function Output Override
+---
 
-By default the `bb_inject_inertia()` function returns `<div id="app" data-page="{...inertiaJsonData}"></div>`. If you need to override the `div` id, you can.
+## Inertia Docs
 
-```php
-// Override 'id="app"' to 'id="my_app"' and add classes
-<?php bb_inject_inertia('my_app', 'bg-blue-100 font-mono p-4'); ?>
-```
-
-## Inertia Response Examples
-
-### Basic
-
-> Location: /wp-content/themes/your-theme/index.php
-
-```php
-<?php
-
-use BoxyBird\Inertia\Inertia;
-
-global $wp_query;
-
-Inertia::render('Index', [
-    'posts' => $wp_query->posts,
-]);
-```
-
-### Less Basic
-
-> Location: /wp-content/themes/your-theme/index.php
-
-This may look busy, however it can be thought of as a "Controller". It gives you a place to handle all your business logic. Leaving your Javacript files easier to reason about.
-
-```php
-<?php
-
-use BoxyBird\Inertia\Inertia;
-
-global $wp_query;
-
-// Build $posts array
-$posts = array_map(function ($post) {
-    return [
-        'id'      => $post->ID,
-        'title'   => get_the_title($post->ID),
-        'link'    => get_the_permalink($post->ID),
-        'image'   => get_the_post_thumbnail_url($post->ID),
-        'content' => apply_filters('the_content', get_the_content(null, false, $post->ID)),
-    ];
-}, $wp_query->posts);
-
-// Build $pagination array
-$current_page = isset($wp_query->query['paged']) ? (int) $wp_query->query['paged'] : 1;
-$prev_page    = $current_page > 1 ? $current_page - 1 : false;
-$next_page    = $current_page + 1;
-
-$pagination = [
-    'prev_page'    => $prev_page,
-    'next_page'    => $next_page,
-    'current_page' => $current_page,
-    'total_pages'  => $wp_query->max_num_pages,
-    'total_posts'  => (int) $wp_query->found_posts,
-];
-
-// Return Inertia view with data
-Inertia::render('Posts/Index', [
-    'posts'      => $posts,
-    'pagination' => $pagination,
-]);
-```
-
-### Quick Note
-
-You may be wondering what this moster line above does:
-
-```php
-'content' => apply_filters('the_content', get_the_content(null, false, $post->ID));
-```
-
-Because we can't use the WordPress function `the_content()` outside of a traditional theme template setup, we need to use `get_the_content()` instead. However, we first need to apply the filters other plugins and WordPress have registered.
-
-Matter of fact, we can't use any WordPress function that uses `echo`, and not `return`.
-
-But don't fret. WordPress typically offers a solution to this caveat: `get_the_title()` vs `the_title()`, `get_the_ID()` vs `the_ID()`, and so on...
-
-Reference: https://developer.wordpress.org/reference/functions/
-
-## Shared data
-
-> Location: /wp-content/themes/your-theme/functions.php
-
-```php
-add_action('init', function () {
-    // Synchronously using key/value
-    Inertia::share('site_name', get_bloginfo('name'));
-
-    // Synchronously using array
-    Inertia::share([
-        'primary_menu' => array_map(function ($menu_item) {
-            return [
-                'id'   => $menu_item->ID,
-                'link' => $menu_item->url,
-                'name' => $menu_item->title,
-            ];
-        }, wp_get_nav_menu_items('Primary Menu'))
-    ]);
-
-    // Lazily using key/callback
-    Inertia::share('auth', function () {
-        if (is_user_logged_in()) {
-            return [
-                'user' => wp_get_current_user()
-            ];
-        }
-    });
-
-    // Lazily on partial reloads
-    Inertia::share('auth', Inertia::lazy(function () {
-        if (is_user_logged_in()) {
-            return [
-                'user' => wp_get_current_user()
-            ];
-        }
-    }));
-
-    // Multiple values
-    Inertia::share([
-        // Synchronously
-        'site' => [
-            'name'       => get_bloginfo('name'),
-            'description'=> get_bloginfo('description'),
-        ],
-        // Lazily
-        'auth' => function () {
-            if (is_user_logged_in()) {
-                return [
-                    'user' => wp_get_current_user()
-                ];
-            }
-        }
-    ]);
-});
-```
-
-## Asset Versioning
-
-> Location: /wp-content/themes/your-theme/functions.php
-
-Optional, but helps with cache busting.
-
-```php
-add_action('init', function () {
-    // If you're using Laravel Mix, you can
-    // use the mix-manifest.json for this.
-    $version = md5_file(get_stylesheet_directory() . '/mix-manifest.json');
-
-    Inertia::version($version);
-});
-```
+- [Links](https://inertiajs.com/links)
+- [Pages](https://inertiajs.com/pages)
+- [Requests](https://inertiajs.com/requests)
+- [Shared Data](https://inertiajs.com/shared-data)
+- [Asset Versioning](https://inertiajs.com/asset-versioning)
+- [Partial Reloads](https://inertiajs.com/partial-reloads)
+- [Deferred Props](https://inertiajs.com/deferred-props)
+- [Merge Props](https://inertiajs.com/merge-props)
